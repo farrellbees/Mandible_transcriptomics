@@ -1,0 +1,52 @@
+###Identifying differentially expressed genes from raw counts using DESeq2. Data imported is a file containing counts derived from STAR 2.7.0 alignments to Apis mellifera genome HAv3.1.
+install.packages('tidyverse')
+BiocManager::install('DESeq2', force = TRUE)
+
+#Import csv contianing counts
+countdata <- read.csv("mandiblesAll.csv", row.names = 1)
+
+countdata <- as.matrix(countdata)
+head(countdata)
+
+condition <- factor(c(rep("C", 3), rep("F", 3), rep("LB", 3), rep("HB", 3), rep("C", 3), rep("F", 3), rep("LB", 3), rep("HB", 3)))
+biting_ability <- c('LB', 'LB','LB','HB','HB','HB','LB','LB','LB','HB','HB','HB','LB','LB','LB','HB','HB','HB','LB','LB','LB','HB','HB','HB')
+age <- c('1','1','1','1','1','1','1','1','1','1','1','1','8','8','8','8','8','8','8','8','8','8','8','8')
+  
+
+
+library('DESeq2')
+library('ggplot2')
+library('EnhancedVolcano')
+
+coldata <- data.frame(row.names = colnames(countdata), biting_ability)
+dds <- DESeqDataSetFromMatrix(countData=countdata, colData=coldata, design=~biting_ability)
+dds
+
+
+dds <- DESeq(dds)
+
+
+plotDispEsts(dds, main="Dispersion plot")
+png("qc-dispersionsHB.png", 1000, 1000, pointsize=20)
+dev.off()
+
+rld<- rlogTransformation(dds)
+head(assay(rld))
+hist(assay(rld))
+
+DESeq2::plotPCA(rld, intgroup="biting_ability")
+png("pcaall8DO.png")
+dev.off()
+
+res <- results(dds)
+table(res$padj<0.05)
+
+res <- res[order(res$padj), ]
+names(res)[1] <- "Gene"
+head(res)
+
+write.csv(res, file="degHvsL_221019.csv")
+
+EnhancedVolcano(res, lab=rownames(res), x= 'log2FoldChange', FCcutoff = 2, pCutoff = 0.001, y ='pvalue', selectLab = 'none', col=c("black", "black", "black","blue"))
+png("1v8_volcano.png")
+dev.off()
